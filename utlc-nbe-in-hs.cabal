@@ -20,14 +20,17 @@ maintainer:         2447746158@qq.com
 -- category:
 extra-source-files: CHANGELOG.md
 
-executable utlc-nbe-in-hs
-    main-is:          Main.hs
-
-    -- Modules included in this executable, other than Main.
-    other-modules:    Expr, Context, Eval, Normalize
-
-    -- LANGUAGE extensions used by modules in this package.
-    -- other-extensions: 
+library
+    exposed-modules:  Expr, Context, Normalize
+    other-modules:    Eval
+    other-extensions: LambdaCase
     build-depends:    base ^>=4.14.3.0, containers ^>=0.6.5.1, MissingH ^>=1.5.0.1
     hs-source-dirs:   app
+    default-language: Haskell2010
+
+test-suite test
+    type:             exitcode-stdio-1.0
+    main-is:          Main.hs
+    hs-source-dirs:   test
+    build-depends:    base, HUnit, utlc-nbe-in-hs
     default-language: Haskell2010

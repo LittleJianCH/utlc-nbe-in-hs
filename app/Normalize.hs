@@ -1,43 +1,16 @@
 module Normalize (
-
+  normalize,
+  exprEqual,
 ) where
 
-import Expr
-import Context
-import Eval
+import Expr ( Expr(..) )
+import Context ( emptyCtx )
+import Eval ( eval )
 
-import Data.Functor
-import Control.Monad
 import qualified Data.Map as M
 
-{-
-the result of evaluating an expression is almost a normalized expression,
-expect the variable shadowing.
-then we use normalize to solve the variable shadowing.
--}
-
-freshen :: [String] -> String -> String
-freshen used x
-  | x `elem` used = freshen (x:used) (x ++ "'")
-  | otherwise = x
-
-normalize' :: [String] -> Expr -> Either String Expr
-normalize' _ v@(Var _) = Right v
-normalize' used l@(Lam x body) =
-  let x' = freshen used x
-  in doApply emptyCtx l (Var x') >>= normalize' (x':used) <&> Lam x'
-normalize' used (App e1 e2) = App <$> normalize' used e1 <*> normalize' used e2
-normalize' used (Let x e1 e2) = Left "There won't be any let in evaled expression"
-normalize' _ Zero = Right Zero
-normalize' used (Succ e) = Succ <$> normalize' used e
-normalize' used (Rec n start iter) =
-  Rec <$> normalize' used n <*> normalize' used start <*> normalize' used iter
-normalize' used (Cons e1 e2) = Cons <$> normalize' used e1 <*> normalize' used e2
-normalize' used (Car e) = Car <$> normalize' used e
-normalize' used (Cdr e) = Cdr <$> normalize' used e
-
 normalize :: Expr -> Either String Expr
-normalize = eval emptyCtx >=> normalize' []
+normalize = eval emptyCtx []
 
 alphaEquiv :: M.Map String String -> Expr -> Expr -> Bool
 alphaEquiv env (Var x) (Var y) = M.lookup x env == Just y
