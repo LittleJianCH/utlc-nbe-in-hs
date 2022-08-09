@@ -2,6 +2,7 @@
 
 module Eval (
   eval,
+  doApply,
 ) where
 
 import Context ( Context, lookupCtx, extendCtx )

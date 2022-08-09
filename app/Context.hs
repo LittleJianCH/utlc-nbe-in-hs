@@ -2,6 +2,7 @@ module Context (
   Context,
   lookupCtx,
   extendCtx,
+  emptyCtx,
 ) where
 
 import Expr ( Expr )
@@ -15,3 +16,6 @@ lookupCtx = Map.lookup
 
 extendCtx :: String -> Expr -> Context -> Context
 extendCtx = Map.insert
+
+emptyCtx :: Context
+emptyCtx = Map.empty
