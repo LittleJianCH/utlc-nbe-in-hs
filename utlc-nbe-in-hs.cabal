@@ -24,10 +24,10 @@ executable utlc-nbe-in-hs
     main-is:          Main.hs
 
     -- Modules included in this executable, other than Main.
-    other-modules:    Expr, Context
+    other-modules:    Expr, Context, Eval
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions: 
-    build-depends:    base ^>=4.14.3.0, containers ^>=0.6.5.1
+    build-depends:    base ^>=4.14.3.0, containers ^>=0.6.5.1, MissingH ^>=1.5.0.1
     hs-source-dirs:   app
     default-language: Haskell2010
