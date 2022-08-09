@@ -69,9 +69,17 @@ testGuass =
                                                  (guassExpr $ num2Nat n))
               | n <- [1 .. 30]]
 
+testRename :: Test
+testRename =
+  let expr = Lam "x" (Lam "x" (Lam "x'" (Cons (Var "x") (Var "x'"))))
+  in TestCase $ assertEqual "Test Rename" 
+                            (Right $ Lam "x" (Lam "x'" (Lam "x''" (Cons (Var "x'")
+                                                                        (Var "x''")))))
+                            (normalize expr)
+
 main :: IO ()
 main = do
-  results <- runTestTT $ TestList [testId, testAdd, testFlip, testGuass]
+  results <- runTestTT $ TestList [testId, testAdd, testFlip, testGuass, testRename]
   if errors results + failures results == 0
     then
       exitSuccess
