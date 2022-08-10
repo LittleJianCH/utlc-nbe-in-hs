@@ -8,9 +8,10 @@ import Context ( emptyCtx )
 import Eval ( eval )
 
 import qualified Data.Map as M
+import Control.Monad.Trans.Reader ( ReaderT(runReaderT) )
 
 normalize :: Expr -> Either String Expr
-normalize = eval emptyCtx []
+normalize expr = runReaderT (eval expr) emptyCtx
 
 alphaEquiv :: M.Map String String -> Expr -> Expr -> Bool
 alphaEquiv env (Var x) (Var y) = M.lookup x env == Just y

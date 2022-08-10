@@ -3,6 +3,7 @@ module Context (
   lookupCtx,
   extendCtx,
   emptyCtx,
+  ctxKeys,
 ) where
 
 import Expr ( Expr )
@@ -19,3 +20,6 @@ extendCtx = Map.insert
 
 emptyCtx :: Context
 emptyCtx = Map.empty
+
+ctxKeys :: Context -> [String]
+ctxKeys = Map.keys

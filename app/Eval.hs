@@ -5,47 +5,58 @@ module Eval (
   doApply,
 ) where
 
-import Context ( Context, lookupCtx, extendCtx )
+import Context ( Context, lookupCtx, extendCtx, ctxKeys )
 import Expr ( Expr(..) )
 
 import Data.Functor ( (<&>) )
 import Data.Either.Utils ( maybeToEither )
-import Control.Monad ( join )
+import Control.Monad ( join, liftM2, liftM3 )
+import Control.Monad.Trans.Reader ( ReaderT, ask, local )
 
-freshen :: [String] -> String -> String
-freshen used x
-  | x `elem` used = freshen (x:used) (x ++ "'")
-  | otherwise = x
+type EvalS = ReaderT Context (Either String)
 
-eval :: Context -> [String] -> Expr -> Either String Expr
-eval ctx _ (Var x) = maybeToEither ("Variable " ++ x ++ " is unbounded.") $ lookupCtx x ctx
-eval ctx used l@(Lam x body) =
-  let x' = freshen used x
-  in doApply (extendCtx x' (Var x') ctx) (x':used) l (Var x') <&> Lam x'
-eval ctx used (App e1 e2) = join $ doApply ctx used <$> eval ctx used e1 
-                                                    <*> eval ctx used e2
-eval ctx used (Let x e1 e2) = eval ctx used (App (Lam x e1) e2)
-eval ctx _ Zero = Right Zero
-eval ctx used (Succ n) = eval ctx used n <&> Succ
-eval ctx used (Rec n start step) 
-  = join $ doRec ctx used <$> eval ctx used n
-                          <*> eval ctx used start 
-                          <*> eval ctx used step
-eval ctx used (Cons e1 e2) = Cons <$> eval ctx used e1 <*> eval ctx used e2
-eval ctx used (Car e) = eval ctx used e <&> \case
-  Cons e1 _ -> e1
-  expr -> Car expr
-eval ctx used (Cdr e) = eval ctx used e <&> \case
-  Cons _ e2 -> e2
-  expr -> Cdr expr
+(>.>) :: (a -> b) -> (b -> c) -> a -> c
+(>.>) = flip (.)
 
-doApply :: Context -> [String] -> Expr -> Expr -> Either String Expr
-doApply ctx used (Lam x body) e2 = eval (extendCtx x e2 ctx) used body
-doApply _ _ e1 e2 = Right $ App e1 e2
+getContext :: EvalS Context
+getContext = ask
 
-doRec :: Context -> [String] -> Expr -> Expr -> Expr -> Either String Expr
-doRec _ _ Zero start _ = Right start
-doRec ctx used n@(Succ n') start step 
-  = join $ doApply ctx used <$> doApply ctx used step n 
-                            <*> doRec ctx used n' start step
-doRec _ _ n start step = Right $ Rec n start step
+getUsed :: EvalS [String]
+getUsed = getContext <&> ctxKeys
+
+freshen :: String -> EvalS String
+freshen x = getUsed >>= elem x >.> (\case
+  True -> freshen $ x ++ "'"
+  False -> return x)
+
+lookupVar :: String -> EvalS Expr
+lookupVar x = getContext >>= maybeToEither ("Undefined variable " ++ show x) . lookupCtx x
+
+eval :: Expr -> EvalS Expr
+eval (Var x) = lookupVar x
+eval lam@(Lam x _) = do
+  x' <- freshen x
+  Lam x' <$> local (extendCtx x' (Var x')) (doApply lam (Var x'))
+eval (App e1 e2) = join $ liftM2 doApply (eval e1) (eval e2)
+eval (Let x e1 e2) = eval (App (Lam x e1) e2)
+eval Zero = return Zero
+eval (Succ e) = Succ <$> eval e
+eval (Rec n start step) = join $ liftM3 doRec (eval n) (eval start) (eval step)
+eval (Cons e1 e2) = Cons <$> eval e1 <*> eval e2
+eval (Car e) = eval e >>= \case
+  Cons car _ -> return car
+  e' -> return $ Car e'
+eval (Cdr e) = eval e >>= \case
+  Cons _ cdr -> return cdr
+  e' -> return $ Cdr e'
+
+doApply :: Expr -> Expr -> EvalS Expr
+doApply (Lam x body) e2 = local (extendCtx x e2) $ eval body
+doApply e1 e2 = return $ App e1 e2
+
+doRec :: Expr -> Expr -> Expr -> EvalS Expr
+doRec Zero start _ = return start
+doRec n@(Succ n') start step
+  = join $ doApply <$> doApply step n
+                   <*> doRec n' start step
+doRec n start step = return $ Rec n start step
