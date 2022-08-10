@@ -37,12 +37,12 @@ testAdd =
 testFlip :: Test
 testFlip = 
   let flip :: Expr -> Expr
-      flip f = Lam "a" (Lam "b" (App (App f (Var "b")) (Var "a")))
+      flip f = App (Lam "f" (Lam "a" (Lam "b" (App (App (Var "f") (Var "b")) (Var "a"))))) f
       f1 = Lam "f" (Var "f")
-      f2 = flip f1
-      f3 = flip $ flip f1
-      f4 = flip $ flip $ flip $ flip f1
-      f5 = Lam "x" (Lam "y" (App (App f1 (Var "x")) (Var "y")))
+      f2 = Lam "f" (flip (Var "f"))
+      f3 = Lam "f" (flip (flip (Var "f")))
+      f4 = Lam "f" (flip (flip (flip (flip (Var "f")))))
+      f5 = Lam "f" (Lam "a" (Lam "b" (App (App (Var "f") (Var "a")) (Var "b"))))
   in TestList [
     TestCase $ assertEqual "Test flip-1-1" (Right True) (exprEqual f1 f1)
   , TestCase $ assertEqual "Test flip-1-2" (Right False) (exprEqual f1 f2)
